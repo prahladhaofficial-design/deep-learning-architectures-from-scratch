@@ -1,0 +1,128 @@
+e) Apply dropout at the hidden layer of the MLP with dropout rates p = 0.2, 0.5, 0.8. Train using
+RMSProp and report results. Compare performance with the model without dropout and comment
+on differences in training and testing performance. (3)
+f) Introduce batch normalization (BN) at the hidden layer of the MLP and report the performance. Batch
+normalization should be applied at the output of the hidden layer before applying the non-linearity.
+In your implementation, include both BN and dropout (with p = 0.2). Compare the performance with
+the vanilla implementation as well as the model with only dropout, and comment on the training and
+testing performance. (3)
+3 Backpropagation in CNN (Theory) (20 evaluation points)
+Consider the convolutional neural network described below. The input is an 8  8 grayscale image X.
+ A 3  3 convolutional filter with bias, stride = 1, and padding = 1 is applied to produce feature map
+Z1.
+ A ReLU activation is applied to obtain A1.
+ A 2  2 max-pooling layer with stride = 2 is applied to obtain P1.
+ A second 33 convolutional layer with 2 filters, stride = 1, and no padding is applied on P1, producing
+Z2.
+ A ReLU activation is applied to obtain A2.
+ The feature maps are flattened into a vector F , which is passed through a fully connected layer (with
+weights W , bias b) to produce Z3.
+ A Sigmoid activation is applied to obtain the final output y.
+The network is trained using binary cross-entropy (BCE) loss.
+Analysis focus:
+(i) Draw a clear flow diagram of the network described above. (2)
+(ii) Determine the dimensions of the following: (3)
+Z1, A1, P1, Z2, A2, F, Z3, y
+(iii) Compute the total number of trainable parameters in the network . (3)
+(iv) Using backpropagation, derive the gradients of the loss with respect to: (2+4+6)
+ Fully connected layer parameters (W, b)
+ Second convolutional layer parameters
+ First convolutional layer parameters
+4 Building Sequence Learners from Scratch: Vanilla RNNs, BPTT, and LSTMs (70 evaluation points)
+In this Module, you will build sequence learning models entirely from scratch using only standard Python
+and NumPy. You will implement a Vanilla Recurrent Neural Network (RNN) and a Long Short-Term Memory
+(LSTM) network to solve a many-to-one sequence task, such as Sentiment Analysis. You will code the
+forward passes, derive and implement Backpropagation Through Time (BPTT), and perform ablation studies
+to understand the internal mechanisms, vanishing gradients, and the effects of architectural variations.
+3
+Part 0: Dataset, Input Representation, and Evaluation Protocol
+To ensure consistency across implementations, all students must follow the specifications below.
+Dataset: You will use the IMDb Movie Reviews Dataset for binary sentiment classification. You
+are not required to use the full dataset. You can do the experiments using a subset of the dataset as well.
+ Each sample consists of a movie review (a sequence of words) and a label:
+ y = 1 (positive sentiment)
+ y = 0 (negative sentiment)
+ You may use a preprocessed version of the dataset (tokenized and cleaned), but you must clearly
+document all preprocessing steps.
+ Split the dataset into training, validation, and test sets (e.g., 80/10/10).
+Input Representation: Since RNNs operate on numerical vectors, you must convert text into vector
+representations. You have to use both of the following approaches and report any differences that you may
+find:
+1. One-Hot Encoding:
+ Represent each word xt as a one-hot vector of size |V |, where V is the vocabulary.
+ This leads to high-dimensional sparse inputs.
+2. Learned Word Embeddings (Recommended):
+ Initialize an embedding matrix E  R|V |d.
+ Each word is mapped to a dense vector:
+xt = E[wt]
+where wt is the index of the word at time step t.
+ The embedding matrix should be trained jointly with the model.
+Sequence Handling:
+ Fix a maximum sequence length T (e.g., T = 50 or T = 100).
+ Truncate longer sequences and pad shorter ones with a special token.
+Evaluation Metrics: To evaluate model performance, report the following metrics on the test set:
+1. Accuracy
+2. F1-Score
+Reporting Requirements:
+ Report Accuracy and F1-score for both:
+ Vanilla RNN
+ LSTM
+ Compare results across:
+ Different sequence lengths
+ Optimizers (SGD vs Adam)
+ Include loss curves and discuss convergence behavior.
+4
+4.1 Part 1: Vanilla RNN and the Forward Pass (12)
+Your first task is to implement the standard Recurrent Neural Network architecture. RNNs are designed
+to handle variable-length inputs by applying the same transformation at every time step, modeling the
+dependence among the inputs.
+Tasks:
+1. Initialize the hidden state at t = 0 as h0 = 0. (2)
+2. Implement the recurrent state update for a sequence of inputs xt: (7)
+ht = tanh(Wxh  xt + Whh  ht1 + bh)
+3. Implement the output layer for a many-to-one configuration (e.g., predicting the final sentiment at the
+end of the sequence): (3)
+yt = softmax(Why  ht + by )
+4.2 Part 2: Backpropagation Through Time (BPTT) and Gradient Issues (18)
+To train the network, you must implement BPTT. The error is a scalar function of the sequence, and the
+computation shares the same parameters across time, meaning you must pool the gradients.
+Tasks:
+1. Implement the BPTT algorithm. You will need to compute gradients L
+V , L
+W , and L
+U . (6)
+2. Code the gradient calculation for the shared weight W accumulating over time steps. Use the chain
+rule formulation provided in the lectures for a sequence of length T : (6)
+L
+W =
+TX
+k=1
+L
+hT
+
+
+TY
+j=k+1
+hj
+hj1
+
+ hk
+W
+3. Exploding Gradients: Because the product QT
+j=k+1
+hj
+hj1 can lead to exploding gradients, imple-
+ment Gradient Clipping to prevent your loss from returning NaN values. (6)
+4.3 Part 3: Long Short-Term Memory (LSTM) Implementation (20)
+Vanilla RNNs struggle to learn long-term dependencies because the gradient vanishes when the product of
+the derivatives hj
+hj1 shrinks over long sequences. To fix this, you will implement an LSTM, which utilizes
+a cell state Ct to store long-term information and gates to erase, write, and read information.
+Tasks: Implement the LSTM node and its gates, ensuring all relevant outputs are bounded between [0, 1]
+using a sigmoid () function where appropriate. Use the concatenated vector [ht1, xt] for your computations.
+1. Forget Gate: Decide what to throw away from the cell state. (2)
+ft = (Wf  [ht1, xt] + bf )
+2. Input Gate & Candidate State: Decide what new information to store. (4)
+it = (Wi  [ht1, xt] + bi)
+ Ct = tanh(WC  [ht1, xt] + bC )
+5
